@@ -1,0 +1,73 @@
+Для решения данной задачи можно использовать алгоритм размещения блоков в контейнере с помощью "жадного" подхода.
+
+Идея состоит в том, чтобы итеративно добавлять блоки в контейнер, начиная с самых крупных блоков и двигаясь к наименьшим,
+и каждый раз выбирая наилучшее место для размещения блока.
+
+Для каждого блока необходимо проверить все возможные варианты его размещения, включая повороты.
+При выборе наилучшего места для размещения блока необходимо учитывать оставшееся свободное пространство
+в контейнере и количество уже размещенных блоков.
+
+module.exports = function layout(blocks) {
+  // Подготавливаем данные
+  const width = blocks[0].form[0].length;
+  const grid = new Array(width).fill(0);
+  const result = [];
+  
+  // Обрабатываем каждый блок
+  for (const block of blocks) {
+    let bestRotation = block.form;
+    let bestPosition = -1;
+    
+    // Перебираем все возможные позиции и повороты блока
+    for (let r = 0; r < 2; r++) {
+      const rotated = rotate(block.form);
+      for (let x = 0; x <= width - rotated[0].length; x++) {
+        // Вычисляем высоту столбцов для данной позиции и поворота
+        const heights = getHeights(grid, rotated, x);
+        const maxHeight = Math.max(...heights);
+        const minEmpty = Math.min(...heights.filter(h => h === maxHeight - 1));
+        const position = minEmpty * width + x;
+        
+        // Сохраняем лучшую позицию и поворот
+        if (minEmpty < maxHeight && (bestPosition === -1 || position < bestPosition)) {
+          bestPosition = position;
+          bestRotation = rotated;
+        }
+      }
+    }
+    
+    // Обновляем сетку и сохраняем результат
+    const column = bestPosition % width;
+    for (let y = 0; y < bestRotation.length; y++) {
+      const row = bestPosition + y * width;
+      for (let x = 0; x < bestRotation[y].length; x++) {
+        if (bestRotation[y][x] === 1) {
+          grid[row + x - column] = y + 1;
+        }
+      }
+    }
+    result.push({ blockId: block.id, position: bestPosition + 1, isRotated: bestRotation !== block.form });
+  }
+  
+  return result;
+}
+
+// Поворачивает блок на 90 градусов против часовой стрелки
+function rotate(block) {
+  const result = new Array(block[0].length).fill().map(() => []);
+  for (let y = 0; y < block.length; y++) {
+    for (let x = 0; x < block[y].length; x++) {
+      result[x][block.length - y - 1] = block[y][x];
+    }
+  }
+  return result;
+}
+
+// Возвращает высоты столбцов для заданной позиции и поворота блока
+function getHeights(grid, block, x) {
+  const result = [];
+  for (let i = x; i < x + block[0].length; i++) {
+    result.push(grid[i] + block.length - 1);
+  }
+  return result;
+}

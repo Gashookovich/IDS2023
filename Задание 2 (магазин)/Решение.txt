@@ -1,0 +1,62 @@
+Для решения данной задачи необходимо произвести следующие шаги:
+
+Получить код валюты заказа из корзины пользователя с помощью метода API-клиента.
+Получить стоимость доставки для указанного города с помощью метода API-клиента.
+Для каждого товара в корзине:
+Получить цену товара на дату заказа с помощью метода API-клиента.
+Получить остатки товара на дату заказа с помощью метода API-клиента.
+Если цена товара не найдена, исключить его из заказа.
+Если количество товара в заказе больше, чем есть на остатках, уменьшить количество до максимально возможного.
+Посчитать стоимость товара в заказе и добавить ее к общей стоимости заказа.
+Если общая стоимость заказа больше 0, сконвертировать ее в валюту заказа с помощью метода API-клиента.
+Используя эти шаги, можно написать решение в виде функции:
+
+module.exports = async function (apiClient, cart) {  
+    // Получаем код валюты заказа
+    const currency = await apiClient.getDefaultCurrency();
+
+    // Получаем стоимость доставки
+    const deliveryCost = await apiClient.getDeliveryCost(cart.cityId);
+
+    let totalCost = 0;
+    let convertedCost = 0;
+
+    // Обходим все товары в корзине
+    for (const item of cart.items) {
+        // Получаем цену товара на дату заказа
+        const prices = await apiClient.getPrices(cart.orderDate);
+        const price = prices.find(p => p.articleId === item.articleId);
+
+        // Если цена не найдена, пропускаем товар
+        if (!price) {
+            continue;
+        }
+
+        // Получаем остатки товара на дату заказа
+        const stock = await apiClient.getStock(cart.orderDate);
+        const stockItem = stock.find(s => s.articleId === item.articleId);
+
+        // Если товара нет на остатках, пропускаем его
+        if (!stockItem) {
+            continue;
+        }
+
+        // Определяем количество товара в заказе
+        const quantity = Math.min(item.quantity, stockItem.quantity);
+
+        // Считаем стоимость товара в заказе
+        const itemCost = price.price * quantity;
+
+        totalCost += itemCost;
+    }
+
+    // Считаем общую стоимость заказа
+    totalCost += deliveryCost;
+
+    // Если общая стоимость заказа больше 0, конвертируем ее в валюту заказа
+    if (totalCost > 0) {
+        convertedCost = await apiClient.convertCurrency('USD', currency, totalCost);
+    }
+
+    return convertedCost;
+}

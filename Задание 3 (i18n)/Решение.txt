@@ -1,0 +1,100 @@
+function getI18nText({ stringTokens, variables, translations, locale }) {
+  let result = "";
+  for (let i = 0; i < stringTokens.length; i++) {
+    const token = stringTokens[i];
+    if (typeof token === "string") {
+      // Обработка неизменяемого текста
+      result += token;
+    } else if (Array.isArray(token)) {
+      // Обработка функции
+      const functionName = token[0];
+      const functionParams = token.slice(1);
+      switch (functionName) {
+        case "@date": {
+          // Функция интернационализации даты
+          const dateValue = functionParams[0];
+          const date = new Date(dateValue);
+          result += new Intl.DateTimeFormat(locale).format(date);
+          break;
+        }
+        case "@number": {
+          // Функция интернационализации чисел и валюты
+          const numberValue = functionParams[0];
+          const currency = functionParams[1];
+          if (currency) {
+            result += new Intl.NumberFormat(locale, { style: "currency", currency }).format(numberValue);
+          } else {
+            result += new Intl.NumberFormat(locale).format(numberValue);
+          }
+          break;
+        }
+        case "@plural": {
+          // Функция плюрализации
+          const key = functionParams[0];
+          const numberValue = functionParams[1];
+          const pluralRules = new Intl.PluralRules(locale);
+          const pluralCategory = pluralRules.select(numberValue);
+          const translation = translations[locale][key][pluralCategory];
+          result += translation.replace("{count}", numberValue);
+          break;
+        }
+        case "@list": {
+          // Функция интернационализации перечислений
+          const listItems = functionParams.map(item => item.toString());
+          result += new Intl.ListFormat(locale).format(listItems);
+          break;
+        }
+        default:
+          // Если неизвестная функция, просто пропускаем
+          break;
+      }
+    } else if (typeof token === "number" || typeof token === "boolean") {
+      // Обработка переменных
+      const variableName = variables[token];
+      result += variableName;
+    }
+  }
+  return result;
+}
+
+Пример использования:
+
+const stringTokens = [
+  "#price",
+  " ",
+  ["@plural", "#day", "$tripDays"],
+  " - ",
+  ["@number", "$tripPrice", "USD"]
+];
+
+const variables = {
+  tripDays: 10,
+  tripPrice: 56789.01
+};
+
+const translations = {
+  "ru-RU": {
+    price: "Цена",
+    day: {
+      zero: " дней",
+      one: " день",
+      few: " дня",
+      many: " дней",
+      other: " дней"
+    }
+  },
+  "en-US": {
+    price: "Price",
+    day: {
+      one: " day",
+      other: " days"
+    }
+  }
+};
+
+const locale = "ru-RU";
+
+const result = getI18nText({ stringTokens, variables, translations, locale });
+
+console.log(result);
+// Output: "Цена 10 дней - 56 789,01 $"

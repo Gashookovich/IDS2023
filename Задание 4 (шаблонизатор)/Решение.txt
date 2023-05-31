@@ -1,0 +1,60 @@
+Для решения данной задачи можно использовать следующий алгоритм:
+
+1. Получить список всех элементов с атрибутом x-make в порядке, соответствующем их вложенности, начиная с верхнего уровня.
+2. Обработать каждый элемент в списке в следующем порядке: сначала copy операции, затем remove операции, далее removeChildren операции, и, наконец, switch операции.
+3. Для copy операций скопировать элемент указанное количество раз и вставить копии после оригинального элемента.
+4. Для remove операций удалить элементы, начиная с указанного элемента, либо удалить все элементы после оригинального элемента, если указанное количество элементов превышает количество элементов после оригинального элемента.
+5. Для removeChildren операций удалить указанное количество потомков элемента, начиная с первого потомка.
+6. Для switch операций поменять местами текущий элемент с элементом, находящимся через указанное количество шагов вперед от текущего элемента.
+
+
+function solution(element) {
+  const elements = Array.from(element.querySelectorAll('[x-make]'));
+
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
+    const xMake = el.getAttribute('x-make').split(':');
+    const operation = xMake[0];
+    const value = parseInt(xMake[1]);
+
+    switch (operation) {
+      case 'copy':
+        for (let j = 0; j < value; j++) {
+          const clone = el.cloneNode(true);
+          el.parentNode.insertBefore(clone, el.nextSibling);
+        }
+        break;
+      case 'remove':
+        if (el.nextElementSibling) {
+          if (el.nextElementSibling === el.parentNode.lastElementChild) {
+            el.parentNode.removeChild(el.nextElementSibling);
+          } else {
+            for (let j = 0; j < value; j++) {
+              if (el.nextElementSibling) {
+                el.parentNode.removeChild(el.nextElementSibling);
+              }
+            }
+          }
+        }
+        break;
+      case 'removeChildren':
+        for (let j = 0; j < value; j++) {
+          if (el.firstElementChild) {
+            el.removeChild(el.firstElementChild);
+          }
+        }
+        break;
+      case 'switch':
+        if (el.nextElementSibling) {
+          const index = Array.from(el.parentNode.children).indexOf(el);
+          const newIndex = index + value;
+          if (newIndex >= 0 && newIndex < el.parentNode.children.length) {
+            el.parentNode.insertBefore(el, el.parentNode.children[newIndex + 1]);
+          }
+        }
+        break;
+    }
+
+    el.removeAttribute('x-make');
+  }
+}

@@ -1,0 +1,41 @@
+module.exports = function(configValue) {
+    const makeDynamicConfig = (obj) => {
+        const dynamicKeys = new Set();
+
+        // Поиск всех динамических ключей
+        const traverse = (value) => {
+            if (typeof value === 'object' && value !== null) {
+                if (value.__dynamic__) {
+                    dynamicKeys.add(value.__dynamic__);
+                } else {
+                    Object.values(value).forEach(traverse);
+                }
+            }
+        };
+        traverse(obj);
+
+        // Создание проксирующего объекта
+        const handler = {
+            get: function(target, prop, receiver) {
+                const value = Reflect.get(target, prop, receiver);
+
+                if (dynamicKeys.has(prop)) {
+                    return configValue(prop);
+                }
+
+                return value;
+            }
+        };
+
+        return new Proxy(obj, handler);
+    };
+    
+    const dynamicConfigValue = (key) => {
+        return { "__dynamic__": key };
+    };
+
+    return {
+        makeDynamicConfig,
+        dynamicConfigValue,
+    };
+}

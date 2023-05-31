@@ -1,0 +1,48 @@
+module.exports = function renderAsync(renderItems, n) {
+    const result = []; // Результат рендеринга
+    const processingQueue = []; // Очередь на обработку
+    let processingCount = 0; // Количество элементов в обработке
+
+    return new Promise(async (resolve) => {
+        // Функция для добавления элемента в очередь
+        const enqueue = async (item) => {
+            processingCount++;
+            const renderedItems = await item.render();
+            processingCount--;
+            result.push(item.id); // Добавляем элемент в результат после его рендеринга
+            if (renderedItems) {
+                // Если у элемента есть вложенные элементы, добавляем их в очередь с их приоритетом
+                for (const renderedItem of renderedItems) {
+                    const priority = renderedItem.priority;
+                    const index = processingQueue.findIndex(
+                        (queueItem) => queueItem.priority < priority
+                    );
+                    if (index === -1) {
+                        processingQueue.push(renderedItem);
+                    } else {
+                        processingQueue.splice(index, 0, renderedItem);
+                    }
+                }
+            }
+            processQueue(); // Пытаемся обработать следующий элемент из очереди
+        };
+
+        // Функция для обработки элементов из очереди
+        const processQueue = async () => {
+            while (processingCount < n && processingQueue.length > 0) {
+                // Обрабатываем элементы пока не достигнем максимального количества одновременно обрабатываемых элементов
+                await enqueue(processingQueue.shift());
+            }
+
+            if (processingCount === 0) {
+                // Если все элементы обработаны, завершаем выполнение и возвращаем результат
+                resolve(result);
+            }
+        };
+
+        // Начинаем обработку с элементов с наивысшим приоритетом
+        renderItems.sort((a, b) => b.priority - a.priority).forEach((item) => {
+            enqueue(item);
+        });
+    });
+};
